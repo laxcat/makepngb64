@@ -1,4 +1,11 @@
 # MakePNG(Base64)
+
+### Build:
+```
+clang++ main.cpp -o makepngb64
+```
+
+### Usage:
 ```
 > makepngb64 2x2x2 0xaabb                                             
 2x2 PNG, filled with r:aa g:bb for every 2-byte pixel:

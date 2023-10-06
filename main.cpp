@@ -7,6 +7,7 @@
 #define STBI_WRITE_NO_STDIO
 #include "stb_image_write.h"
 
+// include directly for simplicity
 #include "modp_b64.cc"
 
 bool parseWHC(char const * str, int * w, int * h, int * c) {
@@ -67,9 +68,10 @@ int main(int argc, char ** argv) {
     char const * helpMsg = "Usage:\n"
     "./makepngb64 WxHxC 0xRRGGBBAA\n";
 
-    // incorrect usage
     int w, h, c;
     uint8_t r, g, b, a;
+
+    // incorrect usage
     if (argc < 3 ||
         !parseWHC(argv[1], &w, &h, &c) ||
         !parseRGBA(argv[2], c, &r, &g, &b, &a)
