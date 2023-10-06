@@ -55,12 +55,12 @@ bool parseWHC(char const * str, int * w, int * h, int * c) {
 }
 
 bool parseRGBA(char const * str, int c, uint8_t * r, uint8_t * g, uint8_t * b, uint8_t * a) {
-    unsigned long abgr = strtoul(str, nullptr, 16);
-    if (abgr == ULLONG_MAX) return false;
-    if (c > 0) *r = (abgr >> (c-1)*8) & 0xff;
-    if (c > 1) *g = (abgr >> (c-2)*8) & 0xff;
-    if (c > 2) *b = (abgr >> (c-3)*8) & 0xff;
-    if (c > 3) *a = (abgr >> (c-4)*8) & 0xff;
+    unsigned long color = strtoul(str, nullptr, 16);
+    if (color == ULLONG_MAX) return false;
+    if (c > 0) *r = color >> (c-1)*8 & 0xff;
+    if (c > 1) *g = color >> (c-2)*8 & 0xff;
+    if (c > 2) *b = color >> (c-3)*8 & 0xff;
+    if (c > 3) *a = color >> (c-4)*8 & 0xff;
     return true;
 }
 
@@ -80,10 +80,10 @@ int main(int argc, char ** argv) {
         return 1;
     }
 
-    printf("%dx%d PNG, filled with r:%02x", w, h, r);
-    if (c > 1) printf(" g:%02x", g);
-    if (c > 2) printf(" b:%02x", b);
-    if (c > 3) printf(" a:%02x", a);
+    printf("%dx%d PNG, filled with R:0x%02x", w, h, r);
+    if (c > 1) printf(", G:0x%02x", g);
+    if (c > 2) printf(", B:0x%02x", b);
+    if (c > 3) printf(", A:0x%02x", a);
     printf(" for every %u-byte pixel:\n", c);
 
     uint8_t * temp = (uint8_t *)malloc(w*h*c);
@@ -94,10 +94,10 @@ int main(int argc, char ** argv) {
         if (c > 3) temp[i+3] = a;
     }
 
-    int outLen;
-    unsigned char * png = stbi_write_png_to_mem(temp, w*c, w, h, c, &outLen);
-    char * pngBase64 = (char *)malloc(modp_b64_encode_len(outLen));
-    modp_b64_encode(pngBase64, (char const *)png, outLen);
+    int pngLen;
+    unsigned char * png = stbi_write_png_to_mem(temp, w*c, w, h, c, &pngLen);
+    char * pngBase64 = (char *)malloc(modp_b64_encode_len(pngLen));
+    modp_b64_encode(pngBase64, (char const *)png, pngLen);
     printf("%s\n", pngBase64);
 
     free(pngBase64);
