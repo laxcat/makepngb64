@@ -52,7 +52,7 @@ int main(int argc, char ** argv) {
     int w, h, c;
     uint8_t r, g, b, a;
 
-    // incorrect usage
+    // parse parameters and output usage message on fail
     if (argc < 3 ||
         !parseWHC(argv[1], &w, &h, &c) ||
         !parseRGBA(argv[2], c, &r, &g, &b, &a)
@@ -61,6 +61,7 @@ int main(int argc, char ** argv) {
         return 1;
     }
 
+    // output description line
     printf("%dx%d PNG, filled with 0x", w, h);
                printf("%02x", r);
     if (c > 1) printf("%02x", g);
@@ -72,6 +73,7 @@ int main(int argc, char ** argv) {
     if (c > 3) printf(",a");
     printf(") for every %u-byte pixel:\n", c);
 
+    // fill unencoded pixel buffer
     int pixelsLen = w*h*c;
     uint8_t * pixels = (uint8_t *)malloc(pixelsLen);
     for (int i = 0; i < pixelsLen; i += c) {
@@ -81,15 +83,16 @@ int main(int argc, char ** argv) {
         if (c > 3) pixels[i+3] = a;
     }
 
+    // enocde to png, then base-64 string
     int pngLen;
     unsigned char * png = stbi_write_png_to_mem(pixels, w*c, w, h, c, &pngLen);
     char * pngBase64 = (char *)malloc(modp_b64_encode_len(pngLen));
     modp_b64_encode(pngBase64, (char const *)png, pngLen);
     printf("%s\n", pngBase64);
 
+    // cleanup and return success
     free(pngBase64);
     free(png);
     free(pixels);
-
     return 0;
 }
