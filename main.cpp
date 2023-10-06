@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <limits.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STBI_WRITE_NO_STDIO
@@ -10,43 +9,28 @@
 // include directly for simplicity
 #include "modp_b64.cc"
 
+bool parseInt(char const ** str, int * i) {
+    if (!**str) return false;
+    *i = 0;
+    while (**str >= '0' && **str <= '9') {
+        *i = *i * 10 + (**str - '0');
+        ++*str;
+    }
+    if (**str && **str != 'x' && **str != 'X') return false;
+    return true;
+}
+
 bool parseWHC(char const * str, int * w, int * h, int * c) {
-    if (str == nullptr) return false;
-
-    int strLen = (int)strlen(str);
-
-    if (strLen >= 512) return false;
-
-    char buff[512];
-    strcpy(buff, str);
-    char * pen = buff;
-    char * base = buff;
-
     // scan for w
-    while (*pen && *pen != 'x') ++pen;
-    if (!*pen) return false;
-    *pen = '\0';
-    unsigned long ww = strtoul(base, nullptr, 10);
-    if (ww > INT_MAX) return false;
-    *w = (int)ww;
-    ++pen;
-    base = pen;
+    if (!parseInt(&str, w) || !*str) return false;
+    ++str;
 
     // scan for h
-    while (*pen && *pen != 'x') ++pen;
-    if (!*pen) return false;
-    *pen = '\0';
-    unsigned long hh = strtoul(base, nullptr, 10);
-    if (hh > INT_MAX) return false;
-    *h = (int)hh;
-    ++pen;
-    base = pen;
+    if (!parseInt(&str, h) || !*str) return false;
+    ++str;
 
     // scan for c
-    while (*pen) ++pen;
-    unsigned long cc = strtoul(base, nullptr, 10);
-    if (cc > INT_MAX) return false;
-    *c = (int)cc;
+    if (!parseInt(&str, c) || *str) return false;
 
     // must have width and height and 1-4 component count
     if (*w == 0 || *h == 0 || *c == 0 || *c > 4) return false;
@@ -57,7 +41,7 @@ bool parseWHC(char const * str, int * w, int * h, int * c) {
 bool parseRGBA(char const * str, int c, uint8_t * r, uint8_t * g, uint8_t * b, uint8_t * a) {
     unsigned long color = strtoul(str, nullptr, 16);
     if (color == ULLONG_MAX) return false;
-    if (c > 0) *r = color >> (c-1)*8 & 0xff;
+               *r = color >> (c-1)*8 & 0xff;
     if (c > 1) *g = color >> (c-2)*8 & 0xff;
     if (c > 2) *b = color >> (c-3)*8 & 0xff;
     if (c > 3) *a = color >> (c-4)*8 & 0xff;
@@ -65,9 +49,6 @@ bool parseRGBA(char const * str, int c, uint8_t * r, uint8_t * g, uint8_t * b, u
 }
 
 int main(int argc, char ** argv) {
-    char const * helpMsg = "Usage:\n"
-    "./makepngb64 WxHxC 0xRRGGBBAA\n";
-
     int w, h, c;
     uint8_t r, g, b, a;
 
@@ -76,33 +57,39 @@ int main(int argc, char ** argv) {
         !parseWHC(argv[1], &w, &h, &c) ||
         !parseRGBA(argv[2], c, &r, &g, &b, &a)
     ) {
-        printf("%s", helpMsg);
+        printf("Usage:\nmakepngb64 WxHxC 0xRRGGBBAA\n");
         return 1;
     }
 
-    printf("%dx%d PNG, filled with R:0x%02x", w, h, r);
-    if (c > 1) printf(", G:0x%02x", g);
-    if (c > 2) printf(", B:0x%02x", b);
-    if (c > 3) printf(", A:0x%02x", a);
-    printf(" for every %u-byte pixel:\n", c);
+    printf("%dx%d PNG, filled with 0x", w, h);
+               printf("%02x", r);
+    if (c > 1) printf("%02x", g);
+    if (c > 2) printf("%02x", b);
+    if (c > 3) printf("%02x", a);
+               printf(" (r");
+    if (c > 1) printf(",g");
+    if (c > 2) printf(",b");
+    if (c > 3) printf(",a");
+    printf(") for every %u-byte pixel:\n", c);
 
-    uint8_t * temp = (uint8_t *)malloc(w*h*c);
-    for (int i = 0; i < w*h*c; i += c) {
-        temp[i+0] = r;
-        if (c > 1) temp[i+1] = g;
-        if (c > 2) temp[i+2] = b;
-        if (c > 3) temp[i+3] = a;
+    int pixelsLen = w*h*c;
+    uint8_t * pixels = (uint8_t *)malloc(pixelsLen);
+    for (int i = 0; i < pixelsLen; i += c) {
+                   pixels[i+0] = r;
+        if (c > 1) pixels[i+1] = g;
+        if (c > 2) pixels[i+2] = b;
+        if (c > 3) pixels[i+3] = a;
     }
 
     int pngLen;
-    unsigned char * png = stbi_write_png_to_mem(temp, w*c, w, h, c, &pngLen);
+    unsigned char * png = stbi_write_png_to_mem(pixels, w*c, w, h, c, &pngLen);
     char * pngBase64 = (char *)malloc(modp_b64_encode_len(pngLen));
     modp_b64_encode(pngBase64, (char const *)png, pngLen);
     printf("%s\n", pngBase64);
 
     free(pngBase64);
     free(png);
-    free(temp);
+    free(pixels);
 
     return 0;
 }
